@@ -154,7 +154,7 @@ The included installer can install Docker and its prerequisites on a base Ubuntu
 Clone the repository:
 
 ```bash
-git clone YOUR_REPOSITORY_URL
+git clone https://github.com/JackT2K/Phase10-Scorecard
 cd p10-v1
 ```
 
