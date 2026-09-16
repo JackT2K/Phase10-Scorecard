@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<h1>Notebook history</h1><div class="list">{% for g in rows %}<a href="/games/{{g.id}}"><b>{{g.notebook or 'No notebook'}} {% if g.sequence_no %}· #{{g.sequence_no}}{% endif %}</b><span>{{g.played_date or 'Unknown date'}} · {{g.players}} · {{g.status}}</span></a>{% else %}<p>No games yet.</p>{% endfor %}</div>{% endblock %}

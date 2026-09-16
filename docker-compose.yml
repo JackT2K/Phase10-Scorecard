@@ -1,0 +1,9 @@
+services:
+  p10:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes: ["p10_data:/data"]
+    ports: ["${P10_BIND_IP:-127.0.0.1}:${P10_PORT:-8080}:8000"]
+volumes:
+  p10_data:

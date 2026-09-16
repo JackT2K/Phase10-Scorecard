@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "P10 Family Scorekeeper",
+  "short_name": "P10",
+  "description": "Family Phase 10 scorekeeper, live game companion, history, and statistics.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#071a4a",
+  "theme_color": "#075bc7",
+  "categories": ["games", "entertainment", "utilities"],
+  "icons": [
+    {"src":"/static/icons/p10-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"/static/icons/p10-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"/static/icons/p10-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ],
+  "shortcuts": [
+    {"name":"Start Live Game","short_name":"Live","url":"/live","icons":[{"src":"/static/icons/p10-192.png","sizes":"192x192"}]},
+    {"name":"Add Historical Game","short_name":"Add Game","url":"/games/new","icons":[{"src":"/static/icons/p10-192.png","sizes":"192x192"}]},
+    {"name":"TV Dashboard","short_name":"TV","url":"/tv","icons":[{"src":"/static/icons/p10-192.png","sizes":"192x192"}]}
+  ]
+}

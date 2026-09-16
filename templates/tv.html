@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#075bc7">
+<title>P10 TV Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/static/css/tv.css?v=1">
+</head>
+<body class="tv2">
+<header class="tv2-head"><div class="tv2-brand"><span>10</span><b>P10 FAMILY DASHBOARD</b></div><div class="tv2-status">{% if active %}<i class="live-dot"></i> LIVE GAME {{active.code}}{% else %}FAMILY STATS{% endif %}</div><time id="clock"></time></header>
+<main id="slides">
+{% if active %}
+<section class="tv-slide active" data-name="Standings">
+ <div class="slide-title"><small>LIVE GAME {{active.code}}</small><h1>Round {{active.round_no}} Standings</h1><p>{{active.round_state|title}}{% if active.status=='lobby' %} · Waiting to start{% endif %}</p></div>
+ <div class="standings-grid">{% for p in live_roster %}<article class="standing {% if not p.active %}dnf{% endif %}" style="--player:{{p.color}}"><i>{{p.initial}}</i><div><h2>{{p.name}}</h2><span>{% if p.active %}Phase {{p.current_phase}}{% else %}Left Game · DNF{% endif %}</span></div><strong>{{p.total_score}}</strong></article>{% endfor %}</div>
+</section>
+<section class="tv-slide" data-name="Phases">
+ <div class="slide-title"><small>LIVE GAME {{active.code}}</small><h1>Phase Progress</h1><p>Round {{active.round_no}}</p></div>
+ {% set phases=['2 sets of 3','1 set of 3 + 1 run of 4','1 set of 4 + 1 run of 4','1 run of 7','1 run of 8','1 run of 9','2 sets of 4','7 cards of 1 color','1 set of 5 + 1 set of 2','1 set of 5 + 1 set of 3'] %}
+ <div class="tv-phase-card"><div class="tv-phase-logo">Phase <b>10</b></div><div class="tv-phase-list">{% for text in phases %}{% set phase=loop.index %}<div class="tv-phase-row"><strong>{{phase}}.</strong><span>{{text}}</span><div class="tv-phase-icons">{% for p in live_roster %}{% if p.active and p.current_phase==phase %}<i title="{{p.name}}" style="background:{{p.color}}">{{p.initial}}</i>{% endif %}{% endfor %}</div></div>{% endfor %}</div></div>
+</section>
+<section class="tv-slide" data-name="Submissions">
+ <div class="slide-title"><small>ROUND {{active.round_no}}</small><h1>{% if active.round_state=='scoring' %}Score Check-In{% else %}Players at the Table{% endif %}</h1><p>{% if active.round_state=='scoring' %}Waiting for scores and host review{% else %}Score entry opens when the host ends the round{% endif %}</p></div>
+ <div class="checkin-grid">{% for p in live_roster %}<article style="--player:{{p.color}}" class="checkin {% if not p.active %}dnf{% endif %}"><i>{{p.initial}}</i><h2>{{p.name}}</h2>{% if not p.active %}<b>LEFT GAME</b>{% elif active.round_state!='scoring' %}<b>PLAYING</b>{% elif p.score_status=='approved' %}<b class="good">APPROVED</b>{% elif p.score_status=='pending' %}<b class="pending">SUBMITTED</b>{% elif p.score_status=='rejected' %}<b class="bad">CORRECTION NEEDED</b>{% else %}<b class="waiting">WAITING</b>{% endif %}</article>{% endfor %}</div>
+</section>
+{% if live_rounds %}<section class="tv-slide" data-name="Live Trend"><div class="slide-title"><small>LIVE GAME {{active.code}}</small><h1>Round Score Trends</h1></div><div class="chart-wrap"><canvas id="live-chart"></canvas></div></section>{% endif %}
+{% else %}
+<section class="tv-slide active" data-name="Podium"><div class="slide-title"><small>FAMILY LEADERBOARD</small><h1>Lowest Average Score</h1></div><div class="podium">{% for x in leaders[:3] %}<article class="podium-card place-{{loop.index}}" style="--player:{{x.color}}"><em>#{{loop.index}}</em><i>{{x.name[0]|upper}}</i><h2>{{x.name}}</h2><strong>{{x.avg_score}}</strong><span>average · {{x.games}} games</span></article>{% endfor %}</div></section>
+<section class="tv-slide" data-name="Wins"><div class="slide-title"><small>FAMILY LEADERBOARD</small><h1>Most Wins</h1></div><div class="podium">{% for x in leaders|sort(attribute='wins',reverse=true) %}{% if loop.index<=3 %}<article class="podium-card place-{{loop.index}}" style="--player:{{x.color}}"><em>#{{loop.index}}</em><i>{{x.name[0]|upper}}</i><h2>{{x.name}}</h2><strong>{{x.wins}}</strong><span>wins · {{x.games}} games</span></article>{% endif %}{% endfor %}</div></section>
+{% if headtohead %}<section class="tv-slide" data-name="Head to Head"><div class="slide-title"><small>HEAD TO HEAD</small><h1>{{headtohead.player1}} vs {{headtohead.player2}}</h1><p>{{headtohead.games}} games together</p></div><div class="versus"><article><h2>{{headtohead.player1}}</h2><strong>{{headtohead.p1wins}}</strong><span>wins</span></article><b>VS</b><article><h2>{{headtohead.player2}}</h2><strong>{{headtohead.p2wins}}</strong><span>wins</span></article></div></section>{% endif %}
+<section class="tv-slide" data-name="Trends"><div class="slide-title"><small>FAMILY HISTORY</small><h1>Final Score Trends</h1></div><div class="chart-wrap"><canvas id="history-chart"></canvas></div></section>
+<section class="tv-slide" data-name="Recent"><div class="slide-title"><small>FAMILY HISTORY</small><h1>Recent Games</h1></div><div class="recent-list">{% for g in recent %}<article><div><b>{{g.played_date or 'Unknown date'}}</b><span>{{g.notebook or 'No notebook'}}</span></div><strong>{{g.summary}}</strong></article>{% endfor %}</div></section>
+{% endif %}
+</main>
+<footer><span id="slide-name"></span><div id="dots"></div><span>Auto-refreshes for live games</span></footer>
+<script>
+const slides=[...document.querySelectorAll('.tv-slide')],dots=document.getElementById('dots'),nameEl=document.getElementById('slide-name');let current=0;
+slides.forEach((s,i)=>{const d=document.createElement('i');if(i===0)d.className='on';dots.appendChild(d)});
+function show(i){slides.forEach((s,n)=>s.classList.toggle('active',n===i));[...dots.children].forEach((d,n)=>d.classList.toggle('on',n===i));nameEl.textContent=slides[i]?.dataset.name||''}
+show(0);setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),1000);
+const liveMode={{ 'true' if active else 'false' }};let completedCycle=false;setInterval(()=>{current=(current+1)%slides.length;show(current);if(current===slides.length-1) completedCycle=true;else if(current===0 && completedCycle){location.reload();}},12000);
+const chartDefaults={responsive:true,maintainAspectRatio:false,animation:{duration:1400},plugins:{legend:{labels:{color:'#fff',font:{size:20},usePointStyle:true}}},scales:{x:{ticks:{color:'#cce3ff',font:{size:14}},grid:{color:'#ffffff12'}},y:{ticks:{color:'#cce3ff',font:{size:15}},grid:{color:'#ffffff18'},beginAtZero:true}}};
+{% if active and live_rounds %}
+const lr={{live_rounds|tojson}},lg={};lr.forEach(x=>(lg[x.name]??={label:x.name,borderColor:x.color,backgroundColor:x.color,data:[],borderWidth:5,tension:.3,pointRadius:5}).data.push({x:'Round '+x.round_no,y:x.score}));new Chart(document.getElementById('live-chart'),{type:'line',data:{datasets:Object.values(lg)},options:{...chartDefaults,parsing:false}});
+{% elif not active %}
+const raw={{trend|tojson}},sets={};raw.forEach(x=>(sets[x.name]??={label:x.name,borderColor:x.color,backgroundColor:x.color,data:[],borderWidth:5,tension:.3,pointRadius:4}).data.push({x:x.label+' #'+x.id,y:x.final_score}));new Chart(document.getElementById('history-chart'),{type:'line',data:{datasets:Object.values(sets)},options:{...chartDefaults,parsing:false}});
+{% endif %}
+</script>
+</body></html>

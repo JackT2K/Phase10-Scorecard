@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P10 Family Scorekeeper</title>
+<meta name="theme-color" content="#075bc7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="P10">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
+<link rel="icon" href="/static/icons/favicon.ico">
+<link rel="stylesheet" href="/static/css/app.css?v=1">
+</head>
+<body class="login-page">
+<form method="post" class="login-panel">
+<img class="login-icon" src="/static/icons/p10-192.png" alt="P10 app icon">
+<h1>P10</h1>
+<p class="login-subtitle">Family Scorekeeper</p>
+<label>Household PIN<input type="password" name="pin" inputmode="numeric" autocomplete="current-password" autofocus required></label>
+<button type="submit">Unlock P10</button>
+{% for message in get_flashed_messages() %}<p class="login-error">{{message}}</p>{% endfor %}
+</form>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js'))}</script>
+</body>
+</html>
