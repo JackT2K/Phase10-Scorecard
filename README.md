@@ -247,6 +247,9 @@ P10 was created to make family game history fun, accessible, and easy to preserv
 
 Whether you're adding years of notebook records or tracking a live game in progress, P10 is focused on making Phase 10 more enjoyable without getting in the way of playing the game.
 
+
+# Disclaimer
+
 ## Trademark Notice
 
 Phase 10® is a registered trademark of Mattel, Inc.
@@ -260,3 +263,11 @@ No official Phase 10 game assets, card artwork, card images, logos, packaging ar
 All trademarks, product names, and registered trademarks remain the property of their respective owners and are used solely for identification and compatibility purposes.
 
 If you are the owner of any intellectual property referenced by this project and believe content should be modified or removed, please contact the project maintainer.
+
+## Fan Project Disclaimer
+
+P10 Family Scorekeeper is a fan-created utility intended to help families and friends record scores, track statistics, and manage game history.
+
+This software does not provide the Phase 10 game itself and is not intended to replace or reproduce the original card game. Ownership of a legitimate copy of the game may be required depending on how the software is used.
+
+This project exists solely as a companion tool for game tracking and record keeping.
