@@ -222,6 +222,9 @@ def live_ux_migrate():
  with conn() as c:
   cols={r['name'] for r in c.execute('PRAGMA table_info(live_games)').fetchall()}
   if 'round_state' not in cols: c.execute("ALTER TABLE live_games ADD COLUMN round_state TEXT NOT NULL DEFAULT 'playing'")
+  lpcols={r['name'] for r in c.execute('PRAGMA table_info(live_players)').fetchall()}
+  if 'manual_score' not in lpcols: c.execute("ALTER TABLE live_players ADD COLUMN manual_score INTEGER NOT NULL DEFAULT 0")
+  if 'paused_at' not in cols: c.execute("ALTER TABLE live_games ADD COLUMN paused_at TEXT")
 live_ux_migrate()
 def live_code():
  import secrets,string
@@ -247,7 +250,7 @@ def live_home():
    g=c.execute('INSERT INTO live_games(code,host_player_id) VALUES(?,?)',(code,host))
    for pid in chosen: c.execute('INSERT INTO live_players(live_game_id,player_id) VALUES(?,?)',(g.lastrowid,pid))
    c.commit(); return redirect(f'/live/{code}/host')
-  active=c.execute("SELECT lg.*,p.name host_name FROM live_games lg LEFT JOIN players p ON p.id=lg.host_player_id WHERE lg.status!='ended' ORDER BY lg.id DESC").fetchall()
+  active=c.execute("SELECT lg.*,p.name host_name FROM live_games lg LEFT JOIN players p ON p.id=lg.host_player_id WHERE lg.status!='ended' ORDER BY CASE lg.status WHEN 'active' THEN 0 WHEN 'lobby' THEN 1 WHEN 'paused' THEN 2 ELSE 3 END,lg.id DESC").fetchall()
  return render_template('live_home.html',players=players,active=active)
 @app.route('/live/join',methods=['GET','POST'])
 @auth
@@ -283,7 +286,7 @@ def live_submit(code):
  token=session.get(f'live_{code.upper()}')
  with conn() as c:
   g=get_live(c,code); me=c.execute('SELECT * FROM live_players WHERE live_game_id=? AND device_token=?',(g['id'],token)).fetchone() if g else None
-  if not g or not me or g['status']!='active' or g['round_state']!='scoring': return ('Score entry is not open',400)
+  if not g or not me or g['status']!='active' or g['round_state']!='scoring' or me['manual_score']: return ('Score entry is not available for this player',400)
   score=as_int(request.form.get('score'))
   if score is None or score<0: flash('Enter a valid score','bad'); return redirect(f'/live/{code}/player')
   c.execute("""INSERT INTO live_scores(live_game_id,round_no,live_player_id,submitted_score,phase_completed,status)
@@ -327,6 +330,51 @@ def live_player_left(code,lpid):
   if not g:return ('Game not found',404)
   c.execute('UPDATE live_players SET active=0 WHERE id=? AND live_game_id=?',(lpid,g['id'])); c.commit(); flash('Player marked as left. Recorded rounds will be retained as DNF.')
  return redirect(f'/live/{code}/host')
+@app.post('/live/<code>/player/<int:lpid>/manual-toggle')
+@auth
+def live_manual_toggle(code,lpid):
+ with conn() as c:
+  g=get_live(c,code)
+  if not g:return ('Game not found',404)
+  c.execute('UPDATE live_players SET manual_score=1-manual_score,device_token=CASE WHEN manual_score=0 THEN NULL ELSE device_token END WHERE id=? AND live_game_id=?',(lpid,g['id']))
+  c.commit(); flash('Manual score entry setting updated.')
+ return redirect(f'/live/{code}/host')
+
+@app.post('/live/<code>/manual-score/<int:lpid>')
+@auth
+def live_manual_score(code,lpid):
+ with conn() as c:
+  g=get_live(c,code)
+  lp=c.execute('SELECT * FROM live_players WHERE id=? AND live_game_id=?',(lpid,g['id'])).fetchone() if g else None
+  score=as_int(request.form.get('score'))
+  if not g or not lp or not lp['active'] or not lp['manual_score'] or g['status']!='active' or g['round_state']!='scoring' or score is None or score<0:
+   flash('Manual score could not be saved.','bad'); return redirect(f'/live/{code}/host')
+  c.execute("""INSERT INTO live_scores(live_game_id,round_no,live_player_id,submitted_score,approved_score,phase_completed,status,reviewed_at)
+  VALUES(?,?,?,?,?,?,'approved',CURRENT_TIMESTAMP)
+  ON CONFLICT(live_game_id,round_no,live_player_id) DO UPDATE SET submitted_score=excluded.submitted_score,approved_score=excluded.approved_score,phase_completed=excluded.phase_completed,status='approved',submitted_at=CURRENT_TIMESTAMP,reviewed_at=CURRENT_TIMESTAMP""",
+  (g['id'],g['round_no'],lp['id'],score,score,1 if request.form.get('phase_completed') else 0)); c.commit(); flash('Manual score saved and approved.')
+ return redirect(f'/live/{code}/host')
+
+@app.post('/live/<code>/pause')
+@auth
+def live_pause(code):
+ with conn() as c:
+  g=get_live(c,code)
+  if not g:return ('Game not found',404)
+  c.execute("UPDATE live_games SET status='paused',paused_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('lobby','active')",(g['id'],)); c.commit(); flash('Live game paused. It will not appear on the TV dashboard.')
+ return redirect('/live')
+
+@app.post('/live/<code>/resume')
+@auth
+def live_resume(code):
+ with conn() as c:
+  g=get_live(c,code)
+  if not g:return ('Game not found',404)
+  other=c.execute("SELECT code FROM live_games WHERE status IN ('lobby','active') AND id!=? LIMIT 1",(g['id'],)).fetchone()
+  if other: flash(f'Pause or end active game {other["code"]} before resuming this game.','bad'); return redirect('/live')
+  c.execute("UPDATE live_games SET status='active',paused_at=NULL WHERE id=? AND status='paused'",(g['id'],)); c.commit(); flash('Live game resumed.')
+ return redirect(f'/live/{code}/host')
+
 @app.post('/live/<code>/review/<int:sid>')
 @auth
 def live_review(code,sid):
@@ -388,3 +436,6 @@ def pwa_service_worker():
 @app.get('/offline')
 def pwa_offline():
  return render_template('offline.html')
+
+
+# === P10 MANUAL SCORE AND PAUSE PATCH ===
